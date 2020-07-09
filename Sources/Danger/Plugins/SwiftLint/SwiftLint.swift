@@ -13,8 +13,8 @@ public enum SwiftLint {
         /// Only lints the modified and created files with `.swift` extension.
         /// - Parameters:
         ///   - directory: Optional property to set the --path to execute at.
-        ///   - path: Optional property to check files with a certain prefix `path/`
-        case modifiedAndCreatedFiles(directory: String?, path: String?)
+        ///   - path: Optional property to check files with a certain prefix `prefix/`
+        case modifiedAndCreatedFiles(directory: String?, prefix: String?)
 
         /// Lints only the given files. This can be useful to do some manual filtering.
         /// The files will be filtered on `.swift` only.
@@ -38,7 +38,7 @@ public enum SwiftLint {
             if lintAllFiles {
                 return .all(directory: directory)
             } else {
-                return .modifiedAndCreatedFiles(directory: directory)
+                return .modifiedAndCreatedFiles(directory: directory, prefix: nil)
             }
         }()
 
@@ -56,7 +56,7 @@ public enum SwiftLint {
     /// it uses by default swift run swiftlint if the Package.swift contains swiftlint as dependency,
     /// otherwise calls directly the swiftlint command
     @discardableResult
-    public static func lint(_ lintStyle: LintStyle = .modifiedAndCreatedFiles(directory: nil),
+    public static func lint(_ lintStyle: LintStyle = .modifiedAndCreatedFiles(directory: nil, prefix: nil),
                             inline: Bool = false,
                             configFile: String? = nil,
                             strict: Bool = false,
@@ -77,7 +77,7 @@ public enum SwiftLint {
 extension SwiftLint {
     // swiftlint:disable:next function_body_length
     static func lint(
-        lintStyle: LintStyle = .modifiedAndCreatedFiles(directory: nil),
+        lintStyle: LintStyle = .modifiedAndCreatedFiles(directory: nil, prefix: nil),
         danger: DangerDSL,
         shellExecutor: ShellExecuting,
         swiftlintPath: String,
@@ -120,11 +120,11 @@ extension SwiftLint {
                                  outputFilePath: outputFilePath,
                                  failAction: failAction,
                                  readFile: readFile)
-        case let .modifiedAndCreatedFiles(directory, path):
+        case let .modifiedAndCreatedFiles(directory, prefix):
             // Gathers modified+created files, invokes SwiftLint on each, and posts collected errors+warnings to Danger.
             var files = (danger.git.createdFiles + danger.git.modifiedFiles)
-            if let path = path {
-                files = files.filter { $0.hasPrefix(path) }
+            if let prefix = prefix {
+                files = files.filter { $0.hasPrefix(prefix) }
             }
 
             violations = lintFiles(files,
