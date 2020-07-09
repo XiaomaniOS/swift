@@ -13,7 +13,8 @@ public enum SwiftLint {
         /// Only lints the modified and created files with `.swift` extension.
         /// - Parameters:
         ///   - directory: Optional property to set the --path to execute at.
-        case modifiedAndCreatedFiles(directory: String?)
+        ///   - path: Optional property to check files with a certain prefix `path/`
+        case modifiedAndCreatedFiles(directory: String?, path: String?)
 
         /// Lints only the given files. This can be useful to do some manual filtering.
         /// The files will be filtered on `.swift` only.
@@ -119,14 +120,15 @@ extension SwiftLint {
                                  outputFilePath: outputFilePath,
                                  failAction: failAction,
                                  readFile: readFile)
-        case let .modifiedAndCreatedFiles(directory):
+        case let .modifiedAndCreatedFiles(directory, path):
             // Gathers modified+created files, invokes SwiftLint on each, and posts collected errors+warnings to Danger.
             var files = (danger.git.createdFiles + danger.git.modifiedFiles)
-            if let directory = directory {
-                files = files.filter { $0.hasPrefix(directory) }
+            if let path = path {
+                files = files.filter { $0.hasPrefix(path) }
             }
 
             violations = lintFiles(files,
+                                   directory: directory,
                                    danger: danger,
                                    arguments: arguments,
                                    shellExecutor: shellExecutor,
@@ -137,6 +139,7 @@ extension SwiftLint {
 
         case let .files(files):
             violations = lintFiles(files,
+                                   directory: nil,
                                    danger: danger,
                                    arguments: arguments,
                                    shellExecutor: shellExecutor,
@@ -185,6 +188,7 @@ extension SwiftLint {
 
     // swiftlint:disable function_parameter_count
     private static func lintFiles(_ files: [File],
+                                  directory: String?,
                                   danger _: DangerDSL,
                                   arguments: [String],
                                   shellExecutor: ShellExecuting,
@@ -200,6 +204,11 @@ extension SwiftLint {
         }
 
         var arguments = arguments
+        
+        if let directory = directory {
+            arguments.append("--path \"\(directory)\"")
+        }
+        
         arguments.append("--use-script-input-files")
         arguments.append("--force-exclude")
 
